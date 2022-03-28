@@ -24,8 +24,6 @@ const userSchema = new Schema(
     password: {
       type: String,
       required: true,
-      minlength: [5, "minimum 5 characters long"],
-      maxlength: [15, "maximum 15 characters long"],
     },
     token: {
       type: String,
