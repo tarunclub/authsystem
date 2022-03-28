@@ -27,6 +27,7 @@ app.get("/", (req, res) => {
   res.send("<h1>Hello from tarun</h1>");
 });
 
+// Register
 app.post("/register", async (req, res) => {
   try {
     const { firstName, lastName, email, password } = req.body;
@@ -62,6 +63,39 @@ app.post("/register", async (req, res) => {
     user.password = undefined;
 
     res.status(201).json(user);
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+// Login
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!(email && password)) {
+      res.status(400).json({
+        message: "All fields are required",
+      });
+
+      const user = await User.findOne({ email });
+
+      if (user && bcrypt.compare(password, user.password)) {
+        const token = jwt.sign(
+          { user_id: user._id, email },
+          process.env.SECRET_KEY,
+          {
+            expiresIn: "2h",
+          }
+        );
+
+        user.token = token;
+        user.password = undefined;
+        res.status(200).json(user);
+      }
+
+      res.status(400).send("email or password is incorrect");
+    }
   } catch (error) {
     console.log(error);
   }
