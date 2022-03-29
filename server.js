@@ -4,6 +4,8 @@ const express = require("express");
 const mongoose = require("mongoose");
 const app = express();
 const User = require("./models/user");
+const auth = require("./middleware/auth");
+const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -21,6 +23,7 @@ mongoose
 
 // Middlewares
 app.use(express.json());
+app.use(cookieParser());
 
 // Requests
 app.get("/", (req, res) => {
@@ -74,31 +77,42 @@ app.post("/login", async (req, res) => {
     const { email, password } = req.body;
 
     if (!(email && password)) {
-      res.status(400).json({
-        message: "All fields are required",
-      });
-
-      const user = await User.findOne({ email });
-
-      if (user && bcrypt.compare(password, user.password)) {
-        const token = jwt.sign(
-          { user_id: user._id, email },
-          process.env.SECRET_KEY,
-          {
-            expiresIn: "2h",
-          }
-        );
-
-        user.token = token;
-        user.password = undefined;
-        res.status(200).json(user);
-      }
-
-      res.status(400).send("email or password is incorrect");
+      res.status(400).send("all fiels are required");
     }
+    const user = await User.findOne({ email });
+
+    if (user && bcrypt.compare(password, user.password)) {
+      const token = jwt.sign(
+        { user_id: user._id, email },
+        process.env.SECRET_KEY,
+        {
+          expiresIn: "2h",
+        }
+      );
+
+      user.token = token;
+      user.password = undefined;
+      // res.status(200).json(user);
+      const options = {
+        expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        httpOnly: true,
+      };
+
+      res.status(200).cookie("token", token, options).json({
+        success: true,
+        token,
+        user,
+      });
+    }
+
+    res.status(400).send("email or password is incorrect");
   } catch (error) {
     console.log(error);
   }
+});
+
+app.get("/dashboard", auth, (req, res) => {
+  res.status(200).send("Welcome to dashboard");
 });
 
 // Server running
